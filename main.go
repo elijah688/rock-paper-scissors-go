@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	var playerChannel chan string = make(chan string)
+	var playerChannel chan int = make(chan int)
 	var endChan chan bool = make(chan bool)
 	var wg sync.WaitGroup
 	wg.Add(1)

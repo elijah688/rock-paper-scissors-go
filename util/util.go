@@ -1,12 +1,12 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 )
@@ -33,23 +33,23 @@ func clearScreen() {
 		log.Fatal(err)
 	}
 }
-func validHumanInput(input string) bool {
-	for _, legalMove := range rps {
+func handleHumanInput(input string) (int, error) {
+	for index, legalMove := range rps {
 		if legalMove == input {
-			return true
+			return index, nil
 		}
 	}
-	return false
+	return -1, errors.New("illegal input")
 }
 
-func CpuMove() string {
+func CpuMove() int {
 	rand.Seed(time.Now().UTC().UnixNano())
 	var cpuMove int = rand.Intn(3)
-	return rps[cpuMove]
+	return cpuMove
 }
 
 func HumanInput(
-	playerInChan chan string,
+	playerInChan chan int,
 	wg *sync.WaitGroup,
 	endChan chan bool,
 ) {
@@ -57,14 +57,13 @@ func HumanInput(
 	for {
 		var humanMove string
 		fmt.Scanln(&humanMove)
-		humanMove = strings.ToLower(humanMove)
 		if humanMove == "q" {
 			endChan <- true
 			return
-		} else if validHumanInput(humanMove) {
-			playerInChan <- humanMove
+		} else if rpsValue, err := handleHumanInput(humanMove); err == nil {
+			playerInChan <- rpsValue
 		} else {
-			fmt.Println("Illegal input! Try Again")
+			fmt.Println(err)
 			clearScreen()
 			initialPrompt()
 		}
@@ -89,33 +88,17 @@ func draw() {
 	fmt.Println("==============")
 }
 
-func produceWinner(humanInput, cpuInput string) {
-	switch humanInput {
-	case cpuInput:
+func produceWinner(humanInput, cpuInput int) {
+	if humanInput == cpuInput {
 		draw()
-	case ROCK:
-		if cpuInput == SCISSORS {
-			youWin()
-		} else {
-			cpuWins()
-		}
-	case SCISSORS:
-		if cpuInput == PAPER {
-			youWin()
-		} else {
-			cpuWins()
-		}
-	case PAPER:
-		if cpuInput == ROCK {
-			youWin()
-		} else {
-			cpuWins()
-		}
+	} else if (cpuInput+1)%3 == humanInput {
+		youWin()
+	} else {
+		cpuWins()
 	}
 }
-
 func Game(
-	playerInChan chan string,
+	playerInChan chan int,
 	wg *sync.WaitGroup,
 	endChan chan bool,
 ) {
@@ -124,9 +107,9 @@ func Game(
 		initialPrompt()
 		select {
 		case playerMove := <-playerInChan:
-			var cpuMove string = CpuMove()
-			fmt.Println("You Chose: ", playerMove)
-			fmt.Println("CPU Chose: ", cpuMove)
+			var cpuMove int = CpuMove()
+			fmt.Println("You Chose: ", rps[playerMove])
+			fmt.Println("CPU Chose: ", rps[cpuMove])
 			produceWinner(playerMove, cpuMove)
 			clearScreen()
 		case <-endChan:
