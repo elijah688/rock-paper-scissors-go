@@ -1,4 +1,4 @@
-package main
+package play
 
 import (
 	"sync"
@@ -15,8 +15,4 @@ func Play() {
 	wg.Add(1)
 	go util.Game(playerChannel, &wg, endChan)
 	wg.Wait()
-}
-
-func main() {
-	Play()
 }
